@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  flaskapp:
+    build: .
+    restart: always
+    environment:
+      - FLASK_ENV=development
+    ports:
+      - "5000:5000"
+    networks:
+      - bookstore_net
+
+networks:
+  bookstore_net:
