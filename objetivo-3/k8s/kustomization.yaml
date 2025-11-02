@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: bookstore
+resources:
+  - 01-namespace.yaml
+  - 10-efs-pv-pvc.yaml
+  - 20-secret-db.example.yaml   # plantilla: en despliegue real usa el Secret creado por comando
+  - 30-mysql.yaml
+  - 40-bookstore-deploy-svc.yaml

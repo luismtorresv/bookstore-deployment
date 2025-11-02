@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-bookstore-primary
+  namespace: bookstore
+  labels: { app: mysql-bookstore-primary }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: mysql-bookstore-primary }
+  template:
+    metadata:
+      labels: { app: mysql-bookstore-primary }
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: bookstore-db-secret, key: DB_PASSWORD }
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef: { name: bookstore-db-secret, key: DB_NAME }
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef: { name: bookstore-db-secret, key: DB_USER }
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: bookstore-db-secret, key: DB_PASSWORD }
+          readinessProbe:
+            exec:
+              command: ["bash","-lc","mysqladmin ping -h 127.0.0.1 -p\"$MYSQL_ROOT_PASSWORD\""]
+            initialDelaySeconds: 20
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["bash","-lc","mysqladmin ping -h 127.0.0.1 -p\"$MYSQL_ROOT_PASSWORD\""]
+            initialDelaySeconds: 40
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-bookstore-primary
+  namespace: bookstore
+spec:
+  type: ClusterIP
+  selector:
+    app: mysql-bookstore-primary
+  ports:
+    - port: 3306
+      targetPort: 3306

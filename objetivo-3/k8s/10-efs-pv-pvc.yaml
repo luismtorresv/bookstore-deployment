@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: efs-pv-bookstore
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes: ["ReadWriteMany"]
+  persistentVolumeReclaimPolicy: Retain
+  mountOptions: ["tls"]
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: fs-035c18fac0c1b6967::fsap-0add021b0b977f65a
+  claimRef:
+    namespace: bookstore
+    name: efs-pvc-bookstore
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: efs-pvc-bookstore
+  namespace: bookstore
+spec:
+  accessModes: ["ReadWriteMany"]
+  resources:
+    requests:
+      storage: 5Gi

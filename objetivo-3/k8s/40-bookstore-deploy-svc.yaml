@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-deploy
+  namespace: bookstore
+  labels: { app: bookstore }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: bookstore }
+  template:
+    metadata:
+      labels: { app: bookstore }
+    spec:
+      containers:
+        - name: bookstore
+          image: 995523304545.dkr.ecr.us-east-1.amazonaws.com/bookstore-ecr:v1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          env:
+            - name: DB_HOST
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: DB_HOST } }
+            - name: DB_USER
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: DB_USER } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: DB_PASSWORD } }
+            - name: DB_NAME
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: DB_NAME } }
+          volumeMounts:
+            - name: static-storage
+              mountPath: /app/static
+      volumes:
+        - name: static-storage
+          persistentVolumeClaim:
+            claimName: efs-pvc-bookstore
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-lb
+  namespace: bookstore
+spec:
+  type: LoadBalancer
+  selector:
+    app: bookstore
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5000
