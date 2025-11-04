@@ -1,0 +1,320 @@
+
+==== 1) Salud de Kubernetes - Nodos ====
+
+
+$ kubectl get nodes -o wide
+
+NAME                            STATUS   ROLES    AGE   VERSION               INTERNAL-IP     EXTERNAL-IP     OS-IMAGE                       KERNEL-VERSION                   CONTAINER-RUNTIME
+ip-172-31-39-53.ec2.internal    Ready    <none>   75m   v1.34.1-eks-113cf36   172.31.39.53    3.81.109.75     Amazon Linux 2023.9.20251014   6.12.46-66.121.amzn2023.x86_64   containerd://2.1.4
+ip-172-31-81-101.ec2.internal   Ready    <none>   73m   v1.34.1-eks-113cf36   172.31.81.101   44.202.30.200   Amazon Linux 2023.9.20251014   6.12.46-66.121.amzn2023.x86_64   containerd://2.1.4
+
+==== 1) Salud de Kubernetes - Pods en bookstore ====
+
+
+$ kubectl -n bookstore get pods -o wide
+
+NAME                                       READY   STATUS    RESTARTS   AGE   IP              NODE                           NOMINATED NODE   READINESS GATES
+bookstore-deploy-bdd57fb64-psj4p           1/1     Running   0          78m   172.31.36.234   ip-172-31-39-53.ec2.internal   <none>           <none>
+bookstore-deploy-bdd57fb64-xc8pb           1/1     Running   0          78m   172.31.47.173   ip-172-31-39-53.ec2.internal   <none>           <none>
+mysql-bookstore-primary-0                  1/1     Running   0          78m   172.31.45.138   ip-172-31-39-53.ec2.internal   <none>           <none>
+mysql-bookstore-primary-76867d5cbd-xvhcd   1/1     Running   0          78m   172.31.46.119   ip-172-31-39-53.ec2.internal   <none>           <none>
+mysql-bookstore-secondary-0                2/2     Running   0          77m   172.31.45.18    ip-172-31-39-53.ec2.internal   <none>           <none>
+mysql-bookstore-secondary-1                2/2     Running   0          74m   172.31.39.36    ip-172-31-39-53.ec2.internal   <none>           <none>
+
+==== 1) Salud de Kubernetes - Servicios y Endpoints ====
+
+
+$ kubectl -n bookstore get svc
+
+NAME                      TYPE           CLUSTER-IP       EXTERNAL-IP                                                               PORT(S)        AGE
+bookstore-lb              LoadBalancer   10.100.71.226    a38b0efd395f64f07b287fe56699c5a8-2048460554.us-east-1.elb.amazonaws.com   80:32735/TCP   2d
+mysql-bookstore-primary   ClusterIP      10.100.126.4     <none>                                                                    3306/TCP       2d
+mysql-bookstore-read      ClusterIP      10.100.134.108   <none>                                                                    3306/TCP       154m
+
+$ kubectl -n bookstore get endpoints
+
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+NAME                      ENDPOINTS                               AGE
+bookstore-lb              172.31.36.234:5000,172.31.47.173:5000   2d
+mysql-bookstore-primary   172.31.45.138:3306                      2d
+mysql-bookstore-read      172.31.39.36:3306,172.31.45.18:3306     154m
+
+==== 2) Balanceador y acceso HTTP ====
+
+LB_HOST=a38b0efd395f64f07b287fe56699c5a8-2048460554.us-east-1.elb.amazonaws.com
+
+$ curl -I --max-time 10 http://a38b0efd395f64f07b287fe56699c5a8-2048460554.us-east-1.elb.amazonaws.com/
+
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0  1739    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+HTTP/1.1 200 OK
+Server: Werkzeug/3.1.3 Python/3.10.19
+Date: Tue, 04 Nov 2025 23:12:29 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 1739
+Vary: Cookie
+Connection: close
+
+
+==== 3) EFS - prueba de archivo compartido entre pods de la app ====
+
+POD_A=bookstore-deploy-bdd57fb64-psj4p  POD_B=bookstore-deploy-bdd57fb64-xc8pb
+
+$ kubectl -n bookstore exec -it bookstore-deploy-bdd57fb64-psj4p -- bash -lc 'date -u > /app/static/efs-ok-20251104-231225.txt && ls -l /app/static/efs-ok-20251104-231225.txt && cat /app/static/efs-ok-20251104-231225.txt'
+
+-rw-r--r--. 1 1000 1000 29 Nov  4 23:12 /app/static/efs-ok-20251104-231225.txt
+Tue Nov  4 23:12:31 UTC 2025
+
+$ kubectl -n bookstore exec -it bookstore-deploy-bdd57fb64-xc8pb -- bash -lc 'ls -l /app/static/efs-ok-20251104-231225.txt && cat /app/static/efs-ok-20251104-231225.txt'
+
+-rw-r--r--. 1 1000 1000 29 Nov  4 23:12 /app/static/efs-ok-20251104-231225.txt
+Tue Nov  4 23:12:31 UTC 2025
+
+==== 4) Replicación MySQL - estado en secundarias ====
+
+
+$ kubectl -n bookstore exec -it mysql-bookstore-secondary-0 -- bash -lc 'mysql --protocol=TCP -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G" | egrep "Replica_IO_Running|Replica_SQL_Running|Seconds_Behind_Source"'
+
+Defaulted container "mysql" out of: mysql, repl-init
+mysql: [Warning] Using a password on the command line interface can be insecure.
+           Replica_IO_Running: Yes
+          Replica_SQL_Running: Yes
+        Seconds_Behind_Source: 0
+    Replica_SQL_Running_State: Replica has read all relay log; waiting for more updates
+
+$ kubectl -n bookstore exec -it mysql-bookstore-secondary-1 -- bash -lc 'mysql --protocol=TCP -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G" | egrep "Replica_IO_Running|Replica_SQL_Running|Seconds_Behind_Source"'
+
+Defaulted container "mysql" out of: mysql, repl-init
+mysql: [Warning] Using a password on the command line interface can be insecure.
+           Replica_IO_Running: Yes
+          Replica_SQL_Running: Yes
+        Seconds_Behind_Source: 0
+    Replica_SQL_Running_State: Replica has read all relay log; waiting for more updates
+
+==== 4) Replicación MySQL - prueba de escritura/lectura ====
+
+
+$ kubectl -n bookstore exec -it mysql-bookstore-primary-0 -- bash -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS bookstore_db; USE bookstore_db; CREATE TABLE IF NOT EXISTS health_replica(id INT PRIMARY KEY AUTO_INCREMENT, ts DATETIME); INSERT INTO health_replica(ts) VALUES (NOW()); SELECT COUNT(*) AS total_rows FROM health_replica;"'
+
+mysql: [Warning] Using a password on the command line interface can be insecure.
++------------+
+| total_rows |
++------------+
+|          2 |
++------------+
+
+$ kubectl -n bookstore exec -it mysql-bookstore-secondary-0 -- bash -lc 'mysql --protocol=TCP -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "USE bookstore_db; SELECT COUNT(*) AS total_rows FROM health_replica;"'
+
+Defaulted container "mysql" out of: mysql, repl-init
+mysql: [Warning] Using a password on the command line interface can be insecure.
++------------+
+| total_rows |
++------------+
+|          2 |
++------------+
+
+$ kubectl -n bookstore exec -it mysql-bookstore-secondary-1 -- bash -lc 'mysql --protocol=TCP -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "USE bookstore_db; SELECT COUNT(*) AS total_rows FROM health_replica;"'
+
+Defaulted container "mysql" out of: mysql, repl-init
+mysql: [Warning] Using a password on the command line interface can be insecure.
++------------+
+| total_rows |
++------------+
+|          2 |
++------------+
+
+==== 5) Variables críticas en primario ====
+
+
+$ kubectl -n bookstore exec -it mysql-bookstore-primary-0 -- bash -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SHOW VARIABLES LIKE \"gtid_mode\"; SHOW VARIABLES LIKE \"enforce_gtid_consistency\"; SHOW VARIABLES LIKE \"server_id\";"'
+
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| gtid_mode     | ON    |
++---------------+-------+
++--------------------------+-------+
+| Variable_name            | Value |
++--------------------------+-------+
+| enforce_gtid_consistency | ON    |
++--------------------------+-------+
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 1     |
++---------------+-------+
+
+==== 6) Eventos recientes ====
+
+
+$ kubectl -n bookstore get events --sort-by=.lastTimestamp | tail -n 50
+
+LAST SEEN   TYPE     REASON          OBJECT                                                   MESSAGE
+3m5s        Normal   FailedBinding   persistentvolumeclaim/data-mysql-bookstore-primary-0     no persistent volumes available for this claim and no storage class is set
+3m5s        Normal   FailedBinding   persistentvolumeclaim/data-mysql-bookstore-secondary-0   no persistent volumes available for this claim and no storage class is set
+
+==== 6) Descripción (probes y mounts) - deployment app ====
+
+
+$ kubectl -n bookstore describe deploy bookstore-deploy | sed -n '/Containers:/,/Conditions:/p'
+
+  Containers:
+   bookstore:
+    Image:      995523304545.dkr.ecr.us-east-1.amazonaws.com/bookstore-ecr:v1
+    Port:       5000/TCP
+    Host Port:  0/TCP
+    Environment:
+      DB_HOST:      <set to the key 'DB_HOST' in secret 'bookstore-db-secret'>      Optional: false
+      DB_USER:      <set to the key 'DB_USER' in secret 'bookstore-db-secret'>      Optional: false
+      DB_PASSWORD:  <set to the key 'DB_PASSWORD' in secret 'bookstore-db-secret'>  Optional: false
+      DB_NAME:      <set to the key 'DB_NAME' in secret 'bookstore-db-secret'>      Optional: false
+    Mounts:
+      /app/static from static-storage (rw)
+  Volumes:
+   static-storage:
+    Type:          PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:     efs-pvc-bookstore
+    ReadOnly:      false
+  Node-Selectors:  <none>
+  Tolerations:     <none>
+Conditions:
+
+==== 6) Descripción (probes y mounts) - mysql primary ====
+
+
+$ kubectl -n bookstore describe statefulset mysql-bookstore-primary | sed -n '/Containers:/,/Conditions:/p'
+
+  Containers:
+   mysql:
+    Image:      mysql:8.4
+    Port:       3306/TCP
+    Host Port:  0/TCP
+    Args:
+      --server-id=1
+      --log-bin=mysql-bin
+      --binlog_format=ROW
+      --gtid_mode=ON
+      --enforce-gtid-consistency=ON
+      --log-replica-updates=ON
+      --binlog_expire_logs_seconds=86400
+    Liveness:   exec [bash -lc mysqladmin ping -h 127.0.0.1 -p"$MYSQL_ROOT_PASSWORD"] delay=40s timeout=1s period=10s #success=1 #failure=3
+    Readiness:  exec [bash -lc mysqladmin ping -h 127.0.0.1 -p"$MYSQL_ROOT_PASSWORD"] delay=20s timeout=1s period=5s #success=1 #failure=3
+    Environment:
+      MYSQL_ROOT_PASSWORD:  <set to the key 'DB_PASSWORD' in secret 'bookstore-db-secret'>  Optional: false
+      MYSQL_DATABASE:       <set to the key 'DB_NAME' in secret 'bookstore-db-secret'>      Optional: false
+      MYSQL_USER:           <set to the key 'DB_USER' in secret 'bookstore-db-secret'>      Optional: false
+      MYSQL_PASSWORD:       <set to the key 'DB_PASSWORD' in secret 'bookstore-db-secret'>  Optional: false
+    Mounts:
+      /var/lib/mysql from data (rw)
+  Volumes:
+   data:
+    Type:          EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:        
+    SizeLimit:     <unset>
+  Node-Selectors:  <none>
+  Tolerations:     <none>
+Volume Claims:     <none>
+Events:            <none>
+
+==== 6) Descripción (probes y mounts) - mysql secondary ====
+
+
+$ kubectl -n bookstore describe statefulset mysql-bookstore-secondary | sed -n '/Containers:/,/Conditions:/p'
+
+  Containers:
+   mysql:
+    Image:      mysql:8.4
+    Port:       3306/TCP
+    Host Port:  0/TCP
+    Command:
+      bash
+      -lc
+    Args:
+      set -e
+      ORD=${HOSTNAME##*-}
+      SID=$((100 + ORD))
+      echo "Usando server-id=${SID} para ${HOSTNAME}"
+      exec docker-entrypoint.sh mysqld \
+        --server-id=${SID} \
+        --relay-log=relay-bin \
+        --gtid_mode=ON \
+        --enforce-gtid-consistency=ON \
+        --read_only=ON
+      
+    Liveness:   exec [bash -lc mysqladmin --protocol=TCP -h 127.0.0.1 -p"$MYSQL_ROOT_PASSWORD" ping] delay=50s timeout=1s period=10s #success=1 #failure=3
+    Readiness:  exec [bash -lc mysqladmin --protocol=TCP -h 127.0.0.1 -p"$MYSQL_ROOT_PASSWORD" ping] delay=25s timeout=1s period=5s #success=1 #failure=3
+    Environment:
+      MYSQL_ROOT_PASSWORD:  <set to the key 'DB_PASSWORD' in secret 'bookstore-db-secret'>    Optional: false
+      MYSQL_DATABASE:       <set to the key 'DB_NAME' in secret 'bookstore-db-secret'>        Optional: false
+      MYSQL_USER:           <set to the key 'DB_USER' in secret 'bookstore-db-secret'>        Optional: false
+      MYSQL_PASSWORD:       <set to the key 'DB_PASSWORD' in secret 'bookstore-db-secret'>    Optional: false
+      REPL_USER:            <set to the key 'REPL_USER' in secret 'bookstore-db-secret'>      Optional: false
+      REPL_PASSWORD:        <set to the key 'REPL_PASSWORD' in secret 'bookstore-db-secret'>  Optional: false
+    Mounts:
+      /var/lib/mysql from data (rw)
+   repl-init:
+    Image:      mysql:8.4
+    Port:       <none>
+    Host Port:  <none>
+    Command:
+      bash
+      -lc
+    Args:
+      echo "[repl-init] Esperando MySQL local..."
+      for i in $(seq 1 180); do
+        mysqladmin --protocol=TCP -h 127.0.0.1 -p"$MYSQL_ROOT_PASSWORD" ping >/dev/null 2>&1 && break
+        sleep 2
+      done
+      echo "[repl-init] Esperando primario..."
+      for i in $(seq 1 180); do
+        mysqladmin --protocol=TCP -h mysql-bookstore-primary.bookstore.svc.cluster.local -u root -p"$MYSQL_ROOT_PASSWORD" ping >/dev/null 2>&1 && break
+        sleep 2
+      done
+      echo "[repl-init] Asegurando usuario de replicación en primario SIN binlog..."
+      for i in $(seq 1 30); do
+        mysql --protocol=TCP -h mysql-bookstore-primary.bookstore.svc.cluster.local -u root -p"$MYSQL_ROOT_PASSWORD" -e "
+          SET SQL_LOG_BIN=0;
+          CREATE USER IF NOT EXISTS '${REPL_USER}'@'%' IDENTIFIED BY '${REPL_PASSWORD}';
+          GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO '${REPL_USER}'@'%';
+          FLUSH PRIVILEGES;
+          SET SQL_LOG_BIN=1;" && break
+        echo "[repl-init] Reintentando crear usuario... ($i/30)"; sleep 3
+      done
+      echo "[repl-init] Configurando CHANGE REPLICATION (GET_SOURCE_PUBLIC_KEY=1)..."
+      for i in $(seq 1 30); do
+        mysql --protocol=TCP -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" -e "
+          STOP REPLICA; RESET REPLICA ALL;
+          CHANGE REPLICATION SOURCE TO
+            SOURCE_HOST='mysql-bookstore-primary.bookstore.svc.cluster.local',
+            SOURCE_USER='${REPL_USER}',
+            SOURCE_PASSWORD='${REPL_PASSWORD}',
+            SOURCE_AUTO_POSITION=1,
+            GET_SOURCE_PUBLIC_KEY=1;
+          START REPLICA;" && break
+        echo "[repl-init] Reintentando configurar replicación... ($i/30)"; sleep 3
+      done
+      echo "[repl-init] OK, sidecar vivo."
+      tail -f /dev/null
+      
+    Requests:
+      cpu:     50m
+      memory:  64Mi
+    Environment:
+      MYSQL_ROOT_PASSWORD:  <set to the key 'DB_PASSWORD' in secret 'bookstore-db-secret'>    Optional: false
+      REPL_USER:            <set to the key 'REPL_USER' in secret 'bookstore-db-secret'>      Optional: false
+      REPL_PASSWORD:        <set to the key 'REPL_PASSWORD' in secret 'bookstore-db-secret'>  Optional: false
+    Mounts:                 <none>
+  Volumes:
+   data:
+    Type:          EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:        
+    SizeLimit:     <unset>
+  Node-Selectors:  <none>
+  Tolerations:     <none>
+Volume Claims:     <none>
+Events:            <none>
+
+==== Git add / commit / push ====
+
