@@ -47,7 +47,9 @@ $ curl -I --max-time 10 http://a38b0efd395f64f07b287fe56699c5a8-2048460554.us-ea
 
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0  1739    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  0  1739    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
 HTTP/1.1 200 OK
 Server: Werkzeug/3.1.3 Python/3.10.19
 Date: Tue, 04 Nov 2025 23:12:29 GMT
@@ -145,6 +147,7 @@ mysql: [Warning] Using a password on the command line interface can be insecure.
 +---------------+-------+
 | server_id     | 1     |
 +---------------+-------+
+
 
 ==== 6) Eventos recientes ====
 
@@ -315,15 +318,3 @@ $ kubectl -n bookstore describe statefulset mysql-bookstore-secondary | sed -n '
   Tolerations:     <none>
 Volume Claims:     <none>
 Events:            <none>
-
-==== Git add / commit / push ====
-
-A  objetivo-3/health/healthcheck-20251104-231225.log
- M objetivo-3/k8s/32-mysql-secondary.yaml
-?? run_healthcheck_and_push.sh
-[master 20b7643] healthcheck: 20251104-231225 (k8s, EFS, MySQL GTID, LB, events)
- 1 file changed, 320 insertions(+)
- create mode 100644 objetivo-3/health/healthcheck-20251104-231225.log
-To https://github.com/luismtorresv/bookstore-deployment
-   54893c7..20b7643  master -> master
-branch 'master' set up to track 'origin/master'.
