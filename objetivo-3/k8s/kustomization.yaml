@@ -4,6 +4,8 @@ namespace: bookstore
 resources:
   - 01-namespace.yaml
   - 10-efs-pv-pvc.yaml
-  - 20-secret-db.example.yaml   # plantilla: en despliegue real usa el Secret creado por comando
-  - 30-mysql.yaml
+  - 20-secret-db.example.yaml   # plantilla (en despliegue real, crear el Secret real vía comando)
+  - 31-mysql-primary.yaml
+  - 33-mysql-repl-bootstrap.yaml
+  - 32-mysql-secondary.yaml
   - 40-bookstore-deploy-svc.yaml

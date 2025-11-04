@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mysql-repl-bootstrap
+  namespace: bookstore
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: create-repl-user
+          image: mysql:8.4
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: DB_PASSWORD } }
+            - name: REPL_USER
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: REPL_USER } }
+            - name: REPL_PASSWORD
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: REPL_PASSWORD } }
+          command: ["bash","-lc"]
+          args:
+            - |
+              echo "Esperando primario..."
+              until mysqladmin ping -h mysql-bookstore-primary.bookstore.svc.cluster.local -p"$MYSQL_ROOT_PASSWORD" -u root >/dev/null 2>&1; do sleep 2; done
+              echo "Creando usuario de replicación si no existe..."
+              mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -h mysql-bookstore-primary.bookstore.svc.cluster.local -e "CREATE USER IF NOT EXISTS '${REPL_USER}'@'%' IDENTIFIED BY '${REPL_PASSWORD}'; GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO '${REPL_USER}'@'%'; FLUSH PRIVILEGES;"
+              echo "Listo."

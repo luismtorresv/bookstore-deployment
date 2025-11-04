@@ -1,0 +1,116 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-bookstore-read
+  namespace: bookstore
+  labels: { app: mysql-bookstore, role: secondary }
+spec:
+  selector: { app: mysql-bookstore, role: secondary }
+  ports:
+    - port: 3306
+      targetPort: 3306
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-bookstore-secondary
+  namespace: bookstore
+  labels: { app: mysql-bookstore, role: secondary }
+spec:
+  serviceName: mysql-bookstore-read
+  replicas: 2
+  selector:
+    matchLabels: { app: mysql-bookstore, role: secondary }
+  template:
+    metadata:
+      labels: { app: mysql-bookstore, role: secondary }
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: DB_PASSWORD } }
+            - name: MYSQL_DATABASE
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: DB_NAME } }
+            - name: MYSQL_USER
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: DB_USER } }
+            - name: MYSQL_PASSWORD
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: DB_PASSWORD } }
+            - name: REPL_USER
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: REPL_USER } }
+            - name: REPL_PASSWORD
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: REPL_PASSWORD } }
+          command: ["bash","-lc"]
+          args:
+            - |
+              set -e
+              ORD=${HOSTNAME##*-}
+              SID=$((100 + ORD))
+              echo "Usando server-id=${SID} para ${HOSTNAME}"
+              exec docker-entrypoint.sh mysqld \
+                --server-id=${SID} \
+                --relay-log=relay-bin \
+                --gtid_mode=ON \
+                --enforce-gtid-consistency=ON \
+                --read_only=ON
+          readinessProbe:
+            exec:
+              command: ["bash","-lc","mysqladmin --protocol=TCP -h 127.0.0.1 -p\"$MYSQL_ROOT_PASSWORD\" ping"]
+            initialDelaySeconds: 25
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["bash","-lc","mysqladmin --protocol=TCP -h 127.0.0.1 -p\"$MYSQL_ROOT_PASSWORD\" ping"]
+            initialDelaySeconds: 50
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+        - name: repl-init
+          image: mysql:8.4
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: DB_PASSWORD } }
+            - name: REPL_USER
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: REPL_USER } }
+            - name: REPL_PASSWORD
+              valueFrom: { secretKeyRef: { name: bookstore-db-secret, key: REPL_PASSWORD } }
+          command: ["bash","-lc"]
+          args:
+            - |
+              set -e
+              echo "[repl-init] Esperando MySQL local..."
+              until mysqladmin --protocol=TCP -h 127.0.0.1 -p"$MYSQL_ROOT_PASSWORD" ping >/dev/null 2>&1; do sleep 2; done
+              echo "[repl-init] Esperando primario..."
+              until mysqladmin --protocol=TCP -h mysql-bookstore-primary.bookstore.svc.cluster.local -u root -p"$MYSQL_ROOT_PASSWORD" ping >/dev/null 2>&1; do sleep 2; done
+
+              echo "[repl-init] Asegurando usuario de replicación en primario..."
+              for i in {1..30}; do
+                if mysql --protocol=TCP -h mysql-bookstore-primary.bookstore.svc.cluster.local -u root -p"$MYSQL_ROOT_PASSWORD" \
+                  -e "CREATE USER IF NOT EXISTS '${REPL_USER}'@'%' IDENTIFIED BY '${REPL_PASSWORD}'; GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO '${REPL_USER}'@'%'; FLUSH PRIVILEGES;"; then
+                  echo "[repl-init] Usuario de réplica OK."
+                  break
+                fi
+                echo "[repl-init] Reintentando crear usuario... ($i/30)"; sleep 3
+              done
+
+              echo "[repl-init] Configurando CHANGE REPLICATION..."
+              for i in {1..30}; do
+                if mysql --protocol=TCP -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" -e "STOP REPLICA; RESET REPLICA ALL; \
+                  CHANGE REPLICATION SOURCE TO SOURCE_HOST='mysql-bookstore-primary.bookstore.svc.cluster.local', SOURCE_USER='${REPL_USER}', SOURCE_PASSWORD='${REPL_PASSWORD}', SOURCE_AUTO_POSITION=1; \
+                  START REPLICA;"; then
+                  echo "[repl-init] Réplica iniciada."
+                  break
+                fi
+                echo "[repl-init] Reintentando configurar replicación... ($i/30)"; sleep 3
+              done
+
+              echo "[repl-init] Manteniendo sidecar vivo."
+              tail -f /dev/null
+          resources: { requests: { cpu: "50m", memory: "64Mi" } }
+      volumes:
+        - name: data
+          emptyDir: {}
