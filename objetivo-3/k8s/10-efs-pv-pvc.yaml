@@ -6,12 +6,15 @@ spec:
   capacity:
     storage: 5Gi
   volumeMode: Filesystem
-  accessModes: ["ReadWriteMany"]
+  accessModes:
+    - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
-  mountOptions: ["tls"]
   csi:
     driver: efs.csi.aws.com
+    # Reemplaza con tu FileSystem y Access Point (ya los usaste así en el cluster)
     volumeHandle: fs-035c18fac0c1b6967::fsap-0add021b0b977f65a
+  mountOptions:
+    - tls
   claimRef:
     namespace: bookstore
     name: efs-pvc-bookstore
@@ -22,7 +25,10 @@ metadata:
   name: efs-pvc-bookstore
   namespace: bookstore
 spec:
-  accessModes: ["ReadWriteMany"]
+  accessModes:
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
+  volumeName: efs-pv-bookstore
+  storageClassName: efs-sc-bookstore
