@@ -1,17 +1,17 @@
-# Course Information
+# Información del Curso
 
 <table>
     <tbody>
         <tr>
-            <td>Course code</td>
+            <td>Código del curso</td>
             <td>ST0263</td>
         </tr>
         <tr>
-            <td>Course name</td>
-            <td>Distributed Systems</td>
+            <td>Nombre del curso</td>
+            <td>Sistemas Distribuidos</td>
         </tr>
         <tr>
-            <td>Students</td>
+            <td>Estudiantes</td>
             <td>
                 <ol>
                 <li>Jerónimo Acosta Acevedo(<tt>jacostaa1[at]eafit.edu.co</tt>)</li>
@@ -21,7 +21,7 @@
             </td>
         </tr>
         <tr>
-            <td>Professor</td>
+            <td>Profesor</td>
             <td><a href="https://scholar.google.com/citations?user=BhCMq0oAAAAJ&hl=es">Edwin Nelson Montoya Múnera</a> (<tt>emontoya[at]eafit.edu.co</tt>)
         </tr>
     </tbody>
@@ -29,119 +29,115 @@
 
 
 
+# Título del Proyecto / Laboratorio / Actividad
 
-# Project Title / Lab / Activity
+## 1. Descripción
+Este proyecto se centró en el diseño, despliegue y escalado de una aplicación web monolítica basada en Flask llamada Bookstore, migrándola progresivamente a entornos cloud-native y contenedorizados usando servicios de AWS y Kubernetes.
 
-## 1. Description
-This project focused on the design, deployment, and scaling of a Flask-based monolithic web application called Bookstore, progressively transitioning it into cloud-native and containerized environments using AWS services and Kubernetes.
+La actividad se dividió en cuatro objetivos principales, cada uno construyendo sobre el anterior para explorar distintos modelos de despliegue y componentes en la nube.
 
-The activity was divided into four main objectives, each building upon the previous one to explore various deployment models and cloud components.
+### 1.1. Requisitos completados
+Objetivo 1 - Despliegue monolítico usando Docker
 
-### 1.1. Completed Requirements
-Objective 1 - Monolithic Deployment using Docker
+- Se desplegaron dos máquinas virtuales (VM).
 
-- Deployed two virtual machines (VMs).
+    - VM 1: Alojó tanto el balanceador de carga Nginx como la aplicación Flask Bookstore usando Docker.
 
-    - VM 1: Hosted both the Nginx load balancer and the Flask Bookstore application using Docker.
+    - VM 2: Alojó un contenedor de base de datos MySQL.
 
-    - VM 2: Hosted a MySQL database container.
+- La configuración demostró aislamiento mediante contenedores y una sencilla red entre VMs para las capas de aplicación y datos.
 
-- The setup demonstrated container-based isolation and simple inter-VM networking for application and data layers.
+Objetivo 2 - Infraestructura con autoescalado usando servicios AWS
 
-Objective 2 - Auto-Scaling Infrastructure with AWS Services
+- Se configuró un grupo de instancias con autoescalado para alta disponibilidad.
 
-- Configured an auto-scaling instance group for high availability.
+- Se usó RDS (Relational Database Service) para gestión de la base de datos, EFS (Elastic File System) para almacenamiento compartido entre instancias, y un ELB (Elastic Load Balancer) de Nginx para distribución de tráfico.
 
-- Used RDS (Relational Database Service) for database management, EFS (Elastic File System) for shared storage across instances, and Nginx ELB (Elastic Load Balancer) for traffic distribution.
+- Se montaron volúmenes EFS en instancias EC2 para persistencia de archivos en el entorno autoescalado.
 
-- Mounted EFS volumes to EC2 instances for file persistence across the auto-scaled environment.
+Objetivo 3 - Despliegue en Kubernetes (EKS)
 
-Objective 3 - Kubernetes Deployment on EKS
+- Se desplegó la aplicación Flask Bookstore en Amazon EKS (Elastic Kubernetes Service).
 
-- Deployed the Bookstore Flask application on Amazon EKS (Elastic Kubernetes Service).
+- Se configuró MySQL dentro del clúster EKS para replicación y persistencia.
 
-- Configured MySQL inside the EKS cluster for database replication and persistence.
+- Se definieron manifiestos de Kubernetes para servicios, despliegues y volúmenes persistentes.
 
-- Defined Kubernetes manifests for services, deployments, and persistent volumes.
+Objetivo 4 - Despliegue de MySQL en EKS con alta disponibilidad
 
-Objective 4 - MySQL deployment on EKS cluster with High Availability
+- Se reforzó y afinó el despliegue en EKS (Objetivo 3) como arquitectura final.
 
-- Reinforced and refined the EKS deployment (Objective 3) as the final architecture choice.
+- El despliegue de MySQL fue replicado dentro del clúster para alta disponibilidad.
 
-- The SQL deployment was replicated inside the Cluster for high availability
+- Se validó la escalabilidad, persistencia de almacenamiento y accesibilidad del servicio vía el dominio dovakhinslayer.com.
 
-- Validated scalability, storage persistence, and service accessibility via the domain dovakhinslayer.com. 
+### 1.2. Requisitos no cumplidos
+- No se configuraron Elastic IPs; se usaron direcciones dinámicas y resolución DNS para pruebas.
 
-### 1.2. Unmet Requirements
-- Elastic IPs were not configured, as dynamic IPs and DNS-based resolution were sufficient for testing.
-
-- Limited implementation of CI/CD pipelines; deployments were done manually via CLI and manifests.  
-
+- Implementación limitada de CI/CD; los despliegues se realizaron manualmente mediante la CLI y manifiestos.
 
 
-## 2. High-Level Design
-### Architecture Overview
+## 2. Diseño de alto nivel
+### Visión arquitectónica
 
-1. Monolithic (Objective 1): Two VM-based architecture with Dockerized Nginx + Flask and a standalone MySQL instance.
+1. Monolítico (Objetivo 1): Arquitectura con dos VMs donde Nginx + Flask corren en Docker y una instancia MySQL separada.
 
-2. Auto-Scaling (Objective 2): AWS Auto Scaling group with ELB, EFS mounts, and RDS integration for database persistence.
+2. Autoescalado (Objetivo 2): Grupo de autoescalado en AWS con ELB, montajes EFS y RDS para persistencia de la BD.
 
-3. EKS (Objective 3 & 4): Kubernetes-based architecture with multiple pods for Flask app replicas, a MySQL deployment within the cluster, and load balancing via EKS ingress.
+3. EKS (Objetivo 3 y 4): Arquitectura basada en Kubernetes con múltiples pods para réplicas de la app Flask, despliegue de MySQL dentro del clúster y balanceo mediante Ingress/Servicio.
 
-### Design Patterns
+### Patrones de diseño
 
-- Layered architecture (presentation, business, data).
+- Arquitectura en capas (presentación, lógica de negocio, datos).
 
-- Container-based micro-deployment model.
+- Modelo de despliegue basado en contenedores.
 
-### Best Practices Applied
+### Buenas prácticas aplicadas
 
-- Docker containerization for consistent environments.
+- Contenerización con Docker para entornos consistentes.
 
-- Use of managed AWS services (RDS, EFS, EKS) for scalability and fault tolerance.
+- Uso de servicios gestionados de AWS (RDS, EFS, EKS) para escalabilidad y tolerancia a fallos.
 
-- DNS-based access instead of static IP allocation.
+- Acceso mediante DNS en lugar de IPs estáticas.
 
 
-
-## 3. Development Environment
-- Programming Language: Python 3.11
+## 3. Entorno de desarrollo
+- Lenguaje de programación: Python 3.11
 
 - Framework: Flask
 
-- Web Server: Nginx
+- Servidor web: Nginx
 
-- Database: MySQL/Aurora for RDS
+- Base de datos: MySQL/Aurora para RDS
 
-- Containerization: Docker
+- Contenerización: Docker
 
-- Orchestration (later stages): Kubernetes (EKS)
+- Orquestación (etapas posteriores): Kubernetes (EKS)
 
-- Version Control: Git / GitHub
+- Control de versiones: Git / GitHub
 
-### 3.1. Compilation and Execution
+### 3.1. Compilación y ejecución
 
-# Clone repository
+# Clonar el repositorio
 ```
 git clone https://github.com/luismtorresv/bookstore-deployment.git
 
 cd bookstore-deployment
 
-# Build and run Flask app
+# Construir y ejecutar la app Flask
 docker build -t bookstore-app .
 
 docker run -d -p 5000:5000 bookstore-app
-
 ```
 
-### 3.2. Development Details
-- Flask app exposes RESTful endpoints for managing books.
+### 3.2. Detalles de desarrollo
+- La aplicación Flask expone endpoints RESTful para la gestión de libros.
 
-- Uses environment variables for DB credentials and host configuration.
+- Usa variables de entorno para credenciales de BD y configuración del host.
 
-- MySQL tables are initialized automatically on container start.
+- Las tablas de MySQL se inicializan automáticamente al arrancar el contenedor.
 
-### 3.3. Configuration
+### 3.3. Configuración
 ```
 DB_HOST=<mysql_host>
 DB_USER=<username>
@@ -151,54 +147,51 @@ FLASK_ENV=production
 ```
 
 
-## 4. Execution Environment (Production)
-- Cloud Provider: AWS
-- Domain: https://dovakhinslayer.com
-- Infrastructure: Deployed through EC2, RDS, EFS, and EKS
-- Database: MySQL (RDS and/or containerized version)
+## 4. Entorno de ejecución (Producción)
+- Proveedor Cloud: AWS
+- Dominio: https://dovakhinslayer.com
+- Infraestructura: Desplegado mediante EC2, RDS, EFS y EKS
+- Base de datos: MySQL (RDS y/o versión contenarizada)
 
-### 4.1. Infrastructure
-Cloud domains, IPs, or server hostnames.  
+### 4.1. Infraestructura
+Dominios cloud, IPs o nombres de host de servidores.
 
-### 4.2. Configuration
-Configuration handled through Kubernetes manifests and AWS Console settings (EFS mount targets, RDS endpoint, and security groups).
+### 4.2. Configuración
+La configuración se maneja mediante manifiestos de Kubernetes y ajustes en la consola de AWS (mount targets de EFS, endpoint de RDS y grupos de seguridad).
 
-### 4.3. Deployment
-# Apply Kubernetes manifests
+### 4.3. Despliegue
+# Aplicar manifiestos de Kubernetes
 ```
 kubectl apply -f deployment.yaml
 kubectl apply -f service.yaml
 kubectl apply -f ingress.yaml
-
 ```
 
-### 4.4. User Guide
-1. Navigate to https://dovakhinslayer.com
+### 4.4. Guía de usuario
+1. Navegar a https://dovakhinslayer.com
 
-2. Access the Bookstore API endpoints or UI to view, add, or modify book entries.
+2. Acceder a los endpoints API o a la UI de Bookstore para ver, añadir o modificar libros.
 
-3. Database persistence and scaling are managed automatically.
-### 4.5. Results (Optional)
-- Successfully deployed a scalable, containerized Flask application accessible via domain.
+3. La persistencia de la base de datos y el escalado se gestionan automáticamente.
+### 4.5. Resultados (Opcional)
+- Despliegue exitoso de una aplicación Flask escalable y contenerizada accesible vía dominio.
 
-- Validated load balancing and auto-scaling behaviors.
+- Validación del balanceo de carga y comportamiento de autoescalado.
 
-- Verified storage persistence across instances.
-
-
-
-## 5. Additional Information
-Other relevant notes about the activity or project. 
-
-- The project demonstrates the evolution from a simple monolithic deployment to a fully scalable and cloud-native infrastructure.
-
-- No Elastic IPs were used; all networking was handled via AWS internal DNS and load balancer endpoints.
-
-- Emphasis was placed on understanding and integrating AWS storage and orchestration services.
+- Verificación de la persistencia de almacenamiento entre instancias.
 
 
+## 5. Información adicional
+Notas relevantes sobre la actividad o el proyecto.
 
-## References
+- El proyecto demuestra la evolución desde un despliegue monolítico hasta una infraestructura totalmente cloud-native y escalable.
+
+- No se utilizaron Elastic IPs; la red se manejó mediante DNS interno de AWS y endpoints de load balancer.
+
+- Se hizo énfasis en entender e integrar servicios de almacenamiento y orquestación de AWS.
+
+
+## Referencias
 - Amazon Web Services. (2025). Get started with Amazon EKS – eksctl.
   https://docs.aws.amazon.com/eks/latest/userguide/getting-started-eksctl.html
 
@@ -236,4 +229,3 @@ https://dev.mysql.com/doc/mysql-replication-excerpt/8.0/en/replication-administr
 
 - Bitnami. (2025). mysql (Helm chart).
   https://artifacthub.io/packages/helm/bitnami/mysql
-
