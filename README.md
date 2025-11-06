@@ -199,8 +199,41 @@ Other relevant notes about the activity or project.
 
 
 ## References
-Acknowledge reused code, tutorials, videos, or bibliographic references.  
-- <site1-url>  
-- <site2-url>  
-- <other-sources>  
+- Amazon Web Services. (2025). Get started with Amazon EKS – eksctl.
+  https://docs.aws.amazon.com/eks/latest/userguide/getting-started-eksctl.html
+
+- Amazon Web Services. (2025). Push a Docker image to an Amazon ECR repository.
+  https://docs.aws.amazon.com/AmazonECR/latest/userguide/docker-push-ecr-image.html
+
+- Amazon Web Services. (2025). Private registry authentication in Amazon ECR.
+  https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html
+
+- Amazon Web Services. (2025). Use elastic file system storage with Amazon EFS
+  (EKS). https://docs.aws.amazon.com/eks/latest/userguide/efs-csi.html
+
+- Kubernetes. (2025, agosto 5). Persistent volumes.
+  https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+
+- Kubernetes. (2025, septiembre 28). Service.
+  https://kubernetes.io/docs/concepts/services-networking/service/
+
+- Kubernetes. (2023, octubre 22). Create an external load balancer.
+  https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/
+
+- MySQL. (2025). 2.3.4 Setting up replication using GTIDs (MySQL 8.0 Reference
+  Manual).
+https://dev.mysql.com/doc/mysql-replication-excerpt/8.0/en/replication-gtids-howto.html
+
+- MySQL. (2025). MySQL Replication (extracto del manual 8.0) [PDF].
+  https://downloads.mysql.com/docs/mysql-replication-excerpt-8.0-en.pdf
+
+- MySQL. (2025). Skipping transactions without GTIDs (MySQL 8.0 Reference
+  Manual).
+https://dev.mysql.com/doc/mysql-replication-excerpt/8.0/en/replication-administration-skip-nogtid.html
+
+- Kubernetes SIGs. (2025). aws-efs-csi-driver [Repositorio GitHub].
+  https://github.com/kubernetes-sigs/aws-efs-csi-driver
+
+- Bitnami. (2025). mysql (Helm chart).
+  https://artifacthub.io/packages/helm/bitnami/mysql
 
