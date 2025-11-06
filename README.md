@@ -1,10 +1,34 @@
 # Course Information
-- Course Code: ST0263-252 
-- Course Name: Topicos Especiales en Telematica
-- Student(s): Jeronimo Acosta, jacostaa1@eafit.edu.co
-- Professor: <name>, <email-eafit>  
 
----
+<table>
+    <tbody>
+        <tr>
+            <td>Course code</td>
+            <td>ST0263</td>
+        </tr>
+        <tr>
+            <td>Course name</td>
+            <td>Distributed Systems</td>
+        </tr>
+        <tr>
+            <td>Students</td>
+            <td>
+                <ol>
+                <li>Jerónimo Acosta Acevedo(<tt>jacostaa1[at]eafit.edu.co</tt>)</li>
+                <li>Juan José Restrepo Higuita (<tt>jjrestre10[at]eafit.edu.co</tt>)</li>
+                <li>Luis Miguel Torres Villegas (<tt>lmtorresv[at]eafit.edu.co</tt>)</li>
+                </ol>
+            </td>
+        </tr>
+        <tr>
+            <td>Professor</td>
+            <td><a href="https://scholar.google.com/citations?user=BhCMq0oAAAAJ&hl=es">Edwin Nelson Montoya Múnera</a> (<tt>emontoya[at]eafit.edu.co</tt>)
+        </tr>
+    </tbody>
+</table>
+
+
+
 
 # Project Title / Lab / Activity
 
@@ -53,7 +77,7 @@ Objective 4 - MySQL deployment on EKS cluster with High Availability
 
 - Limited implementation of CI/CD pipelines; deployments were done manually via CLI and manifests.  
 
----
+
 
 ## 2. High-Level Design
 ### Architecture Overview
@@ -78,7 +102,7 @@ Objective 4 - MySQL deployment on EKS cluster with High Availability
 
 - DNS-based access instead of static IP allocation.
 
----
+
 
 ## 3. Development Environment
 - Programming Language: Python 3.11
@@ -125,7 +149,7 @@ DB_PASSWORD=<password>
 DB_NAME=bookstore
 FLASK_ENV=production
 ```
----
+
 
 ## 4. Execution Environment (Production)
 - Cloud Provider: AWS
@@ -161,7 +185,7 @@ kubectl apply -f ingress.yaml
 
 - Verified storage persistence across instances.
 
----
+
 
 ## 5. Additional Information
 Other relevant notes about the activity or project. 
@@ -172,7 +196,7 @@ Other relevant notes about the activity or project.
 
 - Emphasis was placed on understanding and integrating AWS storage and orchestration services.
 
----
+
 
 ## References
 Acknowledge reused code, tutorials, videos, or bibliographic references.  
