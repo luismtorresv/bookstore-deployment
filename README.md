@@ -29,7 +29,7 @@
 
 
 
-# Título del Proyecto / Laboratorio / Actividad
+# Bookstore Deployment
 
 ## 1. Descripción
 Este proyecto se centró en el diseño, despliegue y escalado de una aplicación web monolítica basada en Flask llamada Bookstore, migrándola progresivamente a entornos cloud-native y contenedorizados usando servicios de AWS y Kubernetes.
